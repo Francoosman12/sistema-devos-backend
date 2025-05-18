@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Sucursal = require('../models/Sucursal'); // Importamos el modelo de sucursal
+const bcrypt = require("bcrypt");
+
 
 // Obtener todos los usuarios
 const getUsers = async (req, res) => {
@@ -16,11 +18,18 @@ const createUser = async (req, res) => {
   try {
     const { nombre, email, telefono, edad, sexo, direccion, contrasena, rol, sucursal } = req.body;
 
-    // Verificar si la sucursal existe
+    const existingUser = await User.findOne({ email });
+if (existingUser) {
+  return res.status(400).json({ message: "El email ya está registrado." });
+}
+
     const sucursalExistente = await Sucursal.findById(sucursal);
     if (!sucursalExistente) {
-      return res.status(400).json({ message: 'La sucursal proporcionada no existe' });
+      return res.status(400).json({ message: "La sucursal proporcionada no existe" });
     }
+
+    // ✅ Hashear la contraseña antes de guardarla
+    const hashedPassword = await bcrypt.hash(contrasena, 10);
 
     const newUser = new User({
       nombre,
@@ -29,15 +38,15 @@ const createUser = async (req, res) => {
       edad,
       sexo,
       direccion,
-      contrasena,
+      contrasena: hashedPassword, // ✅ Se almacena encriptada
       rol,
-      sucursal, // Se asigna el ID de la sucursal validada
+      sucursal,
     });
 
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
   } catch (error) {
-    res.status(400).json({ message: 'Error al crear usuario', error: error.message });
+    res.status(400).json({ message: "Error al crear usuario", error: error.message });
   }
 };
 
@@ -71,4 +80,31 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { getUsers, createUser, updateUser, deleteUser };
+
+
+// ✅ Alternar el estado activo/inactivo de un usuario
+const toggleUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    user.activo = !user.activo; // ✅ Alternar estado
+    await user.save();
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Error al actualizar el estado del usuario", error: error.message });
+  }
+};
+
+
+module.exports = { getUsers, createUser, updateUser, deleteUser, toggleUserStatus };
+
+
+
+
+

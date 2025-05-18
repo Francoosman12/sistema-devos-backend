@@ -1,7 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const multer = require("multer"); // ✅ Agregar multer para manejar imágenes
+const multer = require("multer"); // ✅ Manejo de imágenes
 const connectDB = require("./config/db"); 
 
 // Cargar variables de entorno
@@ -36,6 +36,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
 const attributeRoutes = require("./routes/attributeRoutes");
+const scheduleRoutes = require("./routes/schedulesRoutes"); // ✅ Nueva ruta para horarios
 
 // ✅ Rutas
 app.use("/api/users", userRoutes);
@@ -48,6 +49,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/attributes", attributeRoutes);
+app.use("/api/schedules", scheduleRoutes); // ✅ Agregar ruta de horarios
 
 // ✅ Iniciar servidor
 app.listen(PORT, () => {
