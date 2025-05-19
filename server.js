@@ -26,6 +26,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // ✅ Importar rutas
+const authRoutes = require("./routes/authRoutes"); // ✅ Nueva ruta
 const userRoutes = require("./routes/userRoutes");
 const productRoutes = require("./routes/productRoutes");
 const saleRoutes = require("./routes/saleRoutes");
@@ -39,6 +40,7 @@ const attributeRoutes = require("./routes/attributeRoutes");
 const scheduleRoutes = require("./routes/schedulesRoutes"); // ✅ Nueva ruta para horarios
 
 // ✅ Rutas
+app.use("/api/auth", authRoutes); // ✅ Activar autenticación
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/sales", saleRoutes);
