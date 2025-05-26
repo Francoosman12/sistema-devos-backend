@@ -1,10 +1,15 @@
 const mongoose = require('mongoose');
 
 const saleSchema = new mongoose.Schema({
-  id_producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   id_vendedor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  sucursal: { type: mongoose.Schema.Types.ObjectId, ref: 'Sucursal', required: true }, // Nueva relación con sucursal
-  cantidad_vendida: { type: Number, required: true },
+  sucursal: { type: mongoose.Schema.Types.ObjectId, ref: 'Sucursal', required: true },
+  productos: [
+    {
+      id_producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+      cantidad_vendida: { type: Number, required: true },
+      subtotal: { type: Number, required: true },
+    }
+  ],
   total: { type: Number, required: true },
   metodo_pago: {
     tipo: { type: String, enum: ['tarjeta', 'efectivo', 'combinado'], required: true },

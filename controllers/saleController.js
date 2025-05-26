@@ -27,40 +27,47 @@ const getSales = async (req, res) => {
 // Crear una nueva venta
 const createSale = async (req, res) => {
   try {
-    const { id_producto, id_vendedor, sucursal, cantidad_vendida, total, metodo_pago } = req.body;
+    console.log("🛒 Datos recibidos en el backend:", req.body);
 
-    // Verificar si el producto existe
-    const productoExistente = await Product.findById(id_producto);
-    if (!productoExistente) {
-      return res.status(400).json({ message: 'El producto proporcionado no existe' });
+    const { id_vendedor, sucursal, productos, total, metodo_pago } = req.body;
+
+    if (!id_vendedor || !sucursal || !productos || productos.length === 0 || !total || !metodo_pago) {
+      return res.status(400).json({ message: "Faltan datos en la solicitud de venta." });
     }
 
-    // Verificar si el vendedor existe
-    const vendedorExistente = await User.findById(id_vendedor);
-    if (!vendedorExistente) {
-      return res.status(400).json({ message: 'El vendedor proporcionado no existe' });
+    // Verificar existencia y stock de productos
+    for (const item of productos) {
+      const productoExistente = await Product.findById(item.id_producto);
+      if (!productoExistente) {
+        return res.status(400).json({ message: `El producto con ID ${item.id_producto} no existe` });
+      }
+      if (productoExistente.cantidad_stock < item.cantidad_vendida) {
+        return res.status(400).json({ message: `Stock insuficiente para ${productoExistente.nombre}` });
+      }
     }
 
-    // Verificar si la sucursal existe
-    const sucursalExistente = await Sucursal.findById(sucursal);
-    if (!sucursalExistente) {
-      return res.status(400).json({ message: 'La sucursal proporcionada no existe' });
-    }
-
-    // Convertir el total a Decimal128 antes de guardar
+    // Registrar la venta
     const newSale = new Sale({
-      id_producto,
       id_vendedor,
       sucursal,
-      cantidad_vendida,
-      total: mongoose.Types.Decimal128.fromString(parseFloat(total).toFixed(2)), // Convertir a Decimal128
+      productos,
+      cantidad_vendida: productos.reduce((sum, item) => sum + item.cantidad_vendida, 0),
+      total: mongoose.Types.Decimal128.fromString(total.toString()),
       metodo_pago,
     });
 
     const savedSale = await newSale.save();
+
+    // **Restar stock a los productos vendidos**
+    for (const item of productos) {
+      await Product.findByIdAndUpdate(item.id_producto, {
+        $inc: { cantidad_stock: -item.cantidad_vendida },
+      });
+    }
+
     res.status(201).json(savedSale);
   } catch (error) {
-    res.status(400).json({ message: 'Error al registrar la venta', error: error.message });
+    res.status(400).json({ message: "Error al registrar la venta", error: error.message });
   }
 };
 
