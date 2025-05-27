@@ -7,20 +7,50 @@ const Sucursal = require('../models/Sucursal');
 // Obtener todas las ventas
 const getSales = async (req, res) => {
   try {
-    const sales = await Sale.find()
-      .populate('id_producto')
-      .populate('id_vendedor')
-      .populate('sucursal');
+    const { fechaInicio, fechaFin } = req.query; // ✅ Obtener fechas desde la solicitud
 
-    // Convertir el total a formato numérico con separadores de miles
+    const filtro = {};
+    if (fechaInicio && fechaFin) {
+      filtro.fecha_venta = { $gte: new Date(fechaInicio), $lte: new Date(fechaFin) }; // ✅ Filtrar por rango de fechas
+    }
+
+    const sales = await Sale.find(filtro)
+      .populate("id_vendedor")
+      .populate("sucursal")
+      .populate("productos.id_producto"); // ✅ Corregido para acceder a los productos dentro del array
+
+    // ✅ Convertir el total al formato de moneda correctamente
     const formattedSales = sales.map(sale => ({
       ...sale._doc,
-      total: new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'ARS' }).format(parseFloat(sale.total.toString())),
+      total: new Intl.NumberFormat("es-ES", { style: "currency", currency: "ARS" }).format(parseFloat(sale.total.toString())),
     }));
 
     res.json(formattedSales);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener ventas', error: error.message });
+    console.error("❌ Error al obtener ventas:", error);
+    res.status(500).json({ message: "Error al obtener ventas", error: error.message });
+  }
+};
+
+const getSalesReport = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+
+    console.log("📌 Buscando ventas entre:", fechaInicio, "y", fechaFin);
+
+    const ventas = await Sale.find({
+      fecha_venta: {
+        $gte: new Date(fechaInicio), // ✅ Convierte correctamente a `Date`
+        $lte: new Date(fechaFin)
+      }
+    }).populate("id_vendedor").populate("sucursal").populate("productos.id_producto");
+
+    console.log("📌 Ventas encontradas:", ventas);
+
+    res.json(ventas);
+  } catch (error) {
+    console.error("❌ Error al obtener ventas:", error);
+    res.status(500).json({ message: "Error en el reporte de ventas", error: error.message });
   }
 };
 
@@ -71,4 +101,4 @@ const createSale = async (req, res) => {
   }
 };
 
-module.exports = { getSales, createSale };
+module.exports = { getSales,getSalesReport, createSale };
