@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Sucursal = require('../models/Sucursal');
 const xlsx = require('xlsx');
 const cloudinary = require("../config/cloudinaryConfig");
+const Settings = require("../models/Settings");
 
 // Obtener todos los productos
 const getProducts = async (req, res) => {
@@ -62,12 +63,10 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ message: "Faltan datos obligatorios (nombre, rubro, categoría)." });
     }
 
-    // Procesar atributos dinámicos; se espera que tengan la estructura de arreglo de objetos
     const atributosFinales = typeof req.body.atributos === "string"
       ? JSON.parse(req.body.atributos)
       : req.body.atributos;
 
-    // Subir imagen a Cloudinary si se ha enviado archivo
     let imagen_url = "";
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
@@ -84,15 +83,38 @@ const createProduct = async (req, res) => {
       console.log("✅ Imagen subida a Cloudinary:", imagen_url);
     }
 
-    // Crear el nuevo producto usando el nuevo modelo con atributos dinámicos
+    // ✅ Si el SKU es enviado manualmente, usarlo. Si no, generar uno automáticamente.
+    let skuFinal = req.body.sku && req.body.sku.trim() !== "" ? req.body.sku : null;
+
+    if (!skuFinal) {
+      const settings = await Settings.findOne();
+      if (settings && settings.autoGenerateSKU) {
+        let skuGenerado;
+        let skuExiste = true;
+
+        while (skuExiste) {
+          skuGenerado = Math.floor(1000000000000 + Math.random() * 9000000000000).toString(); // ✅ Generar un número de 13 dígitos
+          skuExiste = await Product.exists({ sku: skuGenerado }); // ✅ Verificar que el SKU generado sea único
+        }
+
+        skuFinal = skuGenerado;
+      }
+    }
+
+    // ✅ Asegurar que el SKU nunca sea `null` o vacío
+    if (!skuFinal) {
+      skuFinal = Math.floor(1000000000000 + Math.random() * 9000000000000).toString(); // 🔄 Generar un SKU único como último recurso
+    }
+
     const newProduct = new Product({
       nombre: req.body.nombre,
       rubro: req.body.rubro,
       categoria: req.body.categoria,
-      atributos: atributosFinales, // Se almacena directamente lo recibido, p.ej. [{ nombre, tipo, valor }]
+      atributos: atributosFinales,
       precio_costo: parseFloat(req.body.precio_costo).toFixed(2),
       precio_publico: parseFloat(req.body.precio_publico).toFixed(2),
       cantidad_stock: req.body.cantidad_stock,
+      sku: skuFinal, // ✅ Ahora el SKU siempre tendrá 13 dígitos únicos
       fabricante: req.body.fabricante || "Desconocido",
       sucursal: req.body.sucursal,
       imagen_url,
@@ -100,7 +122,7 @@ const createProduct = async (req, res) => {
     });
 
     const savedProduct = await newProduct.save();
-    console.log("✅ Producto guardado con imagen:", savedProduct);
+    console.log("✅ Producto guardado correctamente:", savedProduct);
 
     res.status(201).json(savedProduct);
   } catch (error) {

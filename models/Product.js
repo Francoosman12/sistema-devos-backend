@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const Settings = require("../models/Settings"); // ✅ Importar configuración global
 
 const productSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
@@ -14,18 +15,19 @@ const productSchema = new mongoose.Schema({
   precio_costo: { type: mongoose.Types.Decimal128, required: true },
   precio_publico: { type: mongoose.Types.Decimal128, required: true },
   cantidad_stock: { type: Number, required: true, min: 0 },
-  sku: { type: String, unique: true },
+  sku: { type: String, unique: true }, // ✅ Puede ser manual o generado automáticamente
   imagen_url: { type: String },
   descripcion: { type: String },
-  fabricante: { type: String, default: 'Desconocido' },
-  sucursal: { type: mongoose.Schema.Types.ObjectId, ref: 'Sucursal', required: true },
+  fabricante: { type: String, default: "Desconocido" },
+  sucursal: { type: mongoose.Schema.Types.ObjectId, ref: "Sucursal", required: true },
   fecha_creacion: { type: Date, default: Date.now },
-  fecha_ultima_actualizacion:{type:Date, default: Date.now},
+  fecha_ultima_actualizacion: { type: Date, default: Date.now },
   activo: { type: Boolean, default: true },
 });
 
-// Middleware para convertir precios y generar SKU automáticamente
-productSchema.pre('save', function (next) {
+// ✅ Middleware para convertir precios y generar SKU según la configuración
+productSchema.pre("save", async function (next) {
+  // ✅ Convertir precios a Decimal128
   if (this.precio_costo) {
     this.precio_costo = mongoose.Types.Decimal128.fromString(parseFloat(this.precio_costo).toFixed(2));
   }
@@ -33,13 +35,23 @@ productSchema.pre('save', function (next) {
     this.precio_publico = mongoose.Types.Decimal128.fromString(parseFloat(this.precio_publico).toFixed(2));
   }
 
+  // ✅ Solo generar SKU automáticamente si la configuración lo permite
   if (!this.sku) {
-    const timestamp = Date.now().toString().slice(-7);
-    const randomNumbers = Math.floor(100000 + Math.random() * 900000).toString();
-    this.sku = `${timestamp}${randomNumbers}`;
+    const settings = await Settings.findOne();
+    if (settings && settings.autoGenerateSKU) {
+      let skuGenerado;
+      let skuExiste = true;
+
+      while (skuExiste) {
+        skuGenerado = Math.floor(1000000000000 + Math.random() * 9000000000000).toString(); // ✅ Generar un número de 13 dígitos
+        skuExiste = await Product.exists({ sku: skuGenerado }); // ✅ Verificar que sea único en la base de datos
+      }
+
+      this.sku = skuGenerado;
+    }
   }
 
   next();
 });
 
-module.exports = mongoose.model('Product', productSchema);
+module.exports = mongoose.model("Product", productSchema);
