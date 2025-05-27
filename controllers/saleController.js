@@ -7,22 +7,24 @@ const Sucursal = require('../models/Sucursal');
 // Obtener todas las ventas
 const getSales = async (req, res) => {
   try {
-    const { fechaInicio, fechaFin } = req.query; // ✅ Obtener fechas desde la solicitud
+    const { fechaInicio, fechaFin } = req.query;
 
     const filtro = {};
     if (fechaInicio && fechaFin) {
-      filtro.fecha_venta = { $gte: new Date(fechaInicio), $lte: new Date(fechaFin) }; // ✅ Filtrar por rango de fechas
+      filtro.fecha_venta = { $gte: new Date(fechaInicio), $lte: new Date(fechaFin) };
     }
 
     const sales = await Sale.find(filtro)
       .populate("id_vendedor")
       .populate("sucursal")
-      .populate("productos.id_producto"); // ✅ Corregido para acceder a los productos dentro del array
+      .populate("productos.id_producto");
 
-    // ✅ Convertir el total al formato de moneda correctamente
+    // ✅ Convertir `total` correctamente para evitar NaN
     const formattedSales = sales.map(sale => ({
       ...sale._doc,
-      total: new Intl.NumberFormat("es-ES", { style: "currency", currency: "ARS" }).format(parseFloat(sale.total.toString())),
+      total: sale.total instanceof mongoose.Types.Decimal128
+        ? parseFloat(sale.total.toString()) // ✅ Convertir Decimal128 a número correctamente
+        : parseFloat(sale.total) || 0, // ✅ Evita valores `undefined`
     }));
 
     res.json(formattedSales);
