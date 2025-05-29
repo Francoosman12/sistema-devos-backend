@@ -1,4 +1,4 @@
-const Schedule = require("../models/schedules");
+const Schedule = require("../models/Schedules");
 const User = require("../models/User");
 
 // ✅ Obtener todos los horarios
