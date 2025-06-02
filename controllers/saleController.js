@@ -103,4 +103,91 @@ const createSale = async (req, res) => {
   }
 };
 
-module.exports = { getSales,getSalesReport, createSale };
+const getSalesByCategory = async (req, res) => {
+  try {
+    const fechaInicio = new Date();
+    fechaInicio.setHours(0, 0, 0, 0); // ✅ Establece el inicio del día
+    const fechaFin = new Date();
+    fechaFin.setHours(23, 59, 59, 999); // ✅ Establece el final del día
+
+    console.log("📌 Buscando ventas entre:", fechaInicio, "y", fechaFin);
+
+    const ventas = await Sale.find({
+      fecha_venta: { $gte: fechaInicio, $lte: fechaFin }
+    }).populate("productos.id_producto");
+
+    console.log("📌 Ventas encontradas:", ventas);
+
+    // ✅ Agrupar ventas por categoría
+    const salesByCategory = {};
+    ventas.forEach(sale => {
+      sale.productos.forEach(prod => {
+        const categoria = prod.id_producto.categoria || "Sin categoría";
+        if (!salesByCategory[categoria]) {
+          salesByCategory[categoria] = 0;
+        }
+        salesByCategory[categoria] += prod.cantidad_vendida * prod.subtotal;
+      });
+    });
+
+    console.log("📌 Agrupación por categoría:", salesByCategory);
+
+    res.json(Object.entries(salesByCategory).map(([categoria, totalVentas]) => ({ categoria, totalVentas })));
+  } catch (error) {
+    console.error("❌ Error al obtener ventas por categoría:", error);
+    res.status(500).json({ message: "Error al obtener ventas por categoría", error: error.message });
+  }
+};
+
+const getKPI = async (req, res) => {
+  try {
+    const fechaInicio = new Date();
+    fechaInicio.setHours(0, 0, 0, 0);
+    const fechaFin = new Date();
+    fechaFin.setHours(23, 59, 59, 999);
+
+    console.log("📌 Buscando ventas entre:", fechaInicio, "y", fechaFin);
+
+    const ventas = await Sale.find({
+      fecha_venta: { $gte: fechaInicio, $lte: fechaFin }
+    });
+
+    const totalVentas = ventas.reduce((sum, sale) => sum + sale.total, 0);
+    const numTransacciones = ventas.length;
+    const ticketPromedio = numTransacciones > 0 ? totalVentas / numTransacciones : 0;
+
+    console.log("📌 KPI calculado:", { totalVentas, ticketPromedio, numTransacciones });
+
+    res.json({ totalVentas, ticketPromedio, numTransacciones });
+  } catch (error) {
+    console.error("❌ Error al calcular KPI:", error);
+    res.status(500).json({ message: "Error al calcular KPI", error: error.message });
+  }
+};
+
+const getSalesBySeller = async (req, res) => {
+  try {
+    const ventas = await Sale.find().populate("id_vendedor");
+
+    console.log("📌 Ventas encontradas:", ventas);
+
+    // ✅ Agrupar ventas por vendedor
+    const salesBySeller = {};
+    ventas.forEach(sale => {
+      const vendedor = sale.id_vendedor.nombre || "Desconocido";
+      if (!salesBySeller[vendedor]) {
+        salesBySeller[vendedor] = 0;
+      }
+      salesBySeller[vendedor] += sale.total;
+    });
+
+    console.log("📌 Agrupación por vendedor:", salesBySeller);
+
+    res.json(Object.entries(salesBySeller).map(([vendedor, totalVentas]) => ({ vendedor, totalVentas })));
+  } catch (error) {
+    console.error("❌ Error al obtener ventas por vendedor:", error);
+    res.status(500).json({ message: "Error al obtener ventas por vendedor", error: error.message });
+  }
+};
+
+module.exports = { getSales, getSalesReport, getSalesByCategory, createSale, getKPI, getSalesBySeller };
