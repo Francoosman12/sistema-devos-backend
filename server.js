@@ -1,59 +1,73 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const multer = require("multer"); // ✅ Manejo de imágenes
-const connectDB = require("./config/db"); 
+const multer = require("multer");
+const Datastore = require("nedb"); // ✅ NeDB como base de datos
 
-// Cargar variables de entorno
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "*"; 
+const FRONTEND_URL = process.env.FRONTEND_URL || "*";
 
-// ✅ Middleware para procesar JSON y datos de formulario
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // ✅ Importante para `multipart/form-data`
-
-// ✅ Configurar CORS
+app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: FRONTEND_URL }));
 
-// Conectar a MongoDB
-connectDB();
+// ✅ Base de datos NeDB
+const usersDB = new Datastore({ filename: "data/users.db", autoload: true });
+const productsDB = new Datastore({ filename: "data/products.db", autoload: true });
 
-// ✅ Configurar multer para procesar imágenes
+// ✅ Configuración de Multer para imágenes
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// ✅ Importar rutas
-const authRoutes = require("./routes/authRoutes"); // ✅ Nueva ruta
-const userRoutes = require("./routes/userRoutes");
-const productRoutes = require("./routes/productRoutes");
-const saleRoutes = require("./routes/saleRoutes");
-const sucursalRoutes = require("./routes/sucursalRoutes");
-const inventoryRoutes = require("./routes/inventoryRoutes");
-const expenseRoutes = require("./routes/expenseRoutes");
-const orderRoutes = require("./routes/orderRoutes");
-const reportRoutes = require("./routes/reportRoutes");
-const supplierRoutes = require("./routes/supplierRoutes");
-const attributeRoutes = require("./routes/attributeRoutes");
-const scheduleRoutes = require("./routes/schedulesRoutes"); // ✅ Nueva ruta para horarios
+// ✅ Ruta de autenticación
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body;
+  
+  usersDB.findOne({ email, password }, (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ message: "Credenciales incorrectas" });
+    }
+    res.json({ message: "Login exitoso", token: "abc123" });
+  });
+});
 
-// ✅ Rutas
-app.use("/api/auth", authRoutes); // ✅ Activar autenticación
-app.use("/api/users", userRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/sales", saleRoutes);
-app.use("/api/sucursales", sucursalRoutes);
-app.use("/api/inventory", inventoryRoutes);
-app.use("/api/expenses", expenseRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/reports", reportRoutes);
-app.use("/api/suppliers", supplierRoutes);
-app.use("/api/attributes", attributeRoutes);
-app.use("/api/schedules", scheduleRoutes); // ✅ Agregar ruta de horarios
+// ✅ Ruta para registrar usuario (para pruebas)
+app.post("/api/auth/register", (req, res) => {
+  const { email, password, rol } = req.body;
+  
+  usersDB.insert({ email, password, rol }, (err, newUser) => {
+    if (err) return res.status(500).json({ message: "Error al registrar usuario", err });
+    res.json({ message: "Usuario creado", user: newUser });
+  });
+});
 
-// ✅ Iniciar servidor
+// ✅ Ruta para agregar productos
+app.post("/api/products", async (req, res) => {
+  try {
+    productsDB.insert(req.body, (err, newDoc) => {
+      if (err) throw err;
+      res.send(newDoc);
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error al guardar el producto", error });
+  }
+});
+
+// ✅ Ruta para obtener productos
+app.get("/api/products", async (req, res) => {
+  try {
+    productsDB.find({}, (err, docs) => {
+      if (err) throw err;
+      res.send(docs);
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener productos", error });
+  }
+});
+
+// ✅ Iniciar el servidor
 app.listen(PORT, () => {
-  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`✅ Servidor backend corriendo en http://localhost:${PORT}`);
 });
