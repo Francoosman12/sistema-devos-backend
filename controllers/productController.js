@@ -137,6 +137,9 @@ const updateProduct = async (req, res) => {
     const { sucursal, precio_costo, precio_publico } = req.body;
     let imagen_url = req.body.imagen_url; // ✅ Mantener imagen anterior si no se actualiza
 
+console.log("📝 req.body recibido:", req.body);
+console.log("📷 req.file recibido:", req.file); // 🔍 Ver si la imagen llega correctamente
+
     // ✅ Verificar que la sucursal existe antes de actualizar
     if (sucursal) {
       const sucursalExistente = await Sucursal.findById(sucursal);

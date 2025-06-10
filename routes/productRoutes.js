@@ -31,7 +31,7 @@ router.post("/uploadExcel", upload.single("file"), uploadProductsFromExcel);
 router.post("/uploadImage", imageUpload.single("image"), uploadImage);
 
 // ✅ Actualizar un producto
-router.put("/:id", updateProduct);
+router.put("/:id", upload.single("imagen"), updateProduct); // ✅ Ahora Multer procesa la imagen
 
 // ✅ Alternar estado activo/inactivo de un producto
 router.put("/toggleStatus/:id", toggleProductStatus);
