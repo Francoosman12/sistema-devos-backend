@@ -63,6 +63,22 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ message: "Faltan datos obligatorios (nombre, rubro, categoría)." });
     }
 
+const fechaVencimientoRaw = req.body.fecha_vencimiento;
+
+// ✅ Si llega como array, tomar solo el primer valor
+const fechaVencimientoStr = Array.isArray(fechaVencimientoRaw)
+  ? fechaVencimientoRaw[0]
+  : fechaVencimientoRaw;
+
+console.log("📅 Fecha recibida en backend:", fechaVencimientoStr);
+
+// ✅ Convertir solo si es un string con formato adecuado
+const fechaFinal = fechaVencimientoStr ? new Date(fechaVencimientoStr) : null;
+
+if (!fechaFinal || isNaN(fechaFinal.getTime())) {
+  return res.status(400).json({ message: "⚠️ Fecha de vencimiento inválida." });
+}
+
     const atributosFinales = typeof req.body.atributos === "string"
       ? JSON.parse(req.body.atributos)
       : req.body.atributos;
@@ -119,6 +135,7 @@ const createProduct = async (req, res) => {
       sucursal: req.body.sucursal,
       imagen_url,
       fecha_utima_actualizacion: new Date(),
+      fecha_vencimiento: fechaFinal, // ✅ Guardar la fecha de vencimiento
     });
 
     const savedProduct = await newProduct.save();

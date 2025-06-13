@@ -23,6 +23,16 @@ const productSchema = new mongoose.Schema({
   fecha_creacion: { type: Date, default: Date.now },
   fecha_ultima_actualizacion: { type: Date, default: Date.now },
   activo: { type: Boolean, default: true },
+ fecha_vencimiento: {
+  type: Date,
+  required: false,
+  validate: {
+    validator: function (value) {
+      return value instanceof Date && !isNaN(value.getTime()); // ✅ Asegurar que sea una fecha válida
+    },
+    message: "⚠️ Fecha de vencimiento inválida.",
+  },
+},
 });
 
 // ✅ Middleware para convertir precios y generar SKU según la configuración

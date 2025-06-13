@@ -67,18 +67,25 @@ const createSale = async (req, res) => {
       return res.status(400).json({ message: "Faltan datos en la solicitud de venta." });
     }
 
-    // Verificar existencia y stock de productos
+    // ✅ Verificar existencia y stock de productos antes de procesar la venta
+    const productosValidos = [];
     for (const item of productos) {
       const productoExistente = await Product.findById(item.id_producto);
+
       if (!productoExistente) {
-        return res.status(400).json({ message: `El producto con ID ${item.id_producto} no existe` });
+        return res.status(400).json({ message: `❌ El producto con ID ${item.id_producto} no existe.` });
       }
+
       if (productoExistente.cantidad_stock < item.cantidad_vendida) {
-        return res.status(400).json({ message: `Stock insuficiente para ${productoExistente.nombre}` });
+        return res.status(400).json({
+          message: `⚠️ Stock insuficiente para "${productoExistente.nombre}". Solo quedan ${productoExistente.cantidad_stock} unidades.`,
+        });
       }
+
+      productosValidos.push({ producto: productoExistente, cantidad_vendida: item.cantidad_vendida });
     }
 
-    // Registrar la venta
+    // ✅ Si pasó la validación, proceder con la venta
     const newSale = new Sale({
       id_vendedor,
       sucursal,
@@ -90,16 +97,17 @@ const createSale = async (req, res) => {
 
     const savedSale = await newSale.save();
 
-    // **Restar stock a los productos vendidos**
-    for (const item of productos) {
-      await Product.findByIdAndUpdate(item.id_producto, {
-        $inc: { cantidad_stock: -item.cantidad_vendida },
+    // ✅ Restar stock a los productos vendidos
+    for (const { producto, cantidad_vendida } of productosValidos) {
+      await Product.findByIdAndUpdate(producto._id, {
+        $inc: { cantidad_stock: -cantidad_vendida },
       });
     }
 
-    res.status(201).json(savedSale);
+    res.status(201).json({ message: "✅ Venta registrada correctamente.", sale: savedSale });
   } catch (error) {
-    res.status(400).json({ message: "Error al registrar la venta", error: error.message });
+    console.error("❌ Error al registrar la venta:", error.message);
+    res.status(500).json({ message: "Error al registrar la venta", error: error.message });
   }
 };
 
