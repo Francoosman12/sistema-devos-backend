@@ -1,13 +1,43 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const supplierSchema = new mongoose.Schema({
-  nombre: { type: String, required: true },
-  contacto: { type: String },
-  telefono: { type: String },
-  email: { type: String, match: [/^\S+@\S+\.\S+$/, 'Email inválido'] },
-  direccion: { type: String },
-  productos_suministrados: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], // Relación con productos
-  fecha_creacion: { type: Date, default: Date.now },
-});
+const supplierSchema = new mongoose.Schema(
+  {
+    nombre: { type: String, required: true, trim: true },
 
-module.exports = mongoose.model('Supplier', supplierSchema);
+    contacto: { type: String }, // Persona de contacto o representante
+
+    telefono: { type: String }, // Puede incluir validación con regex si querés
+
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true,
+      match: [/^\S+@\S+\.\S+$/, "Email inválido"],
+    },
+
+    direccion: { type: String },
+
+    tipo: {
+      type: String,
+      enum: ["insumos", "logística", "tecnología", "servicio", "otro"],
+      default: "otro",
+    },
+
+    observaciones: { type: String },
+
+    productos_suministrados: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+    ],
+
+    activo: { type: Boolean, default: true },
+
+    fecha_creacion: { type: Date, default: Date.now },
+  },
+  {
+    timestamps: true, // ✅ Agrega createdAt y updatedAt automáticamente
+  }
+);
+
+module.exports = mongoose.model("Supplier", supplierSchema);

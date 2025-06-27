@@ -148,6 +148,11 @@ if (!fechaFinal || isNaN(fechaFinal.getTime())) {
   }
 };
 
+const parsePrecio = (valor) => {
+  if (!valor) return 0;
+  return parseFloat(valor.replace(/\./g, "").replace(",", "."));
+};
+
 // Actualizar un producto existente
 const updateProduct = async (req, res) => {
   try {
@@ -183,12 +188,8 @@ console.log("📷 req.file recibido:", req.file); // 🔍 Ver si la imagen llega
     }
 
     // ✅ Convertir precios a formato numérico válido si se proporcionan
-    if (precio_costo) {
-      req.body.precio_costo = mongoose.Types.Decimal128.fromString(parseFloat(precio_costo).toFixed(2));
-    }
-    if (precio_publico) {
-      req.body.precio_publico = mongoose.Types.Decimal128.fromString(parseFloat(precio_publico).toFixed(2));
-    }
+   req.body.precio_costo = mongoose.Types.Decimal128.fromString(parsePrecio(precio_costo).toFixed(2));
+req.body.precio_publico = mongoose.Types.Decimal128.fromString(parsePrecio(precio_publico).toFixed(2));
 
     // ✅ Actualizar fecha de última modificación automáticamente
     req.body.fecha_ultima_actualizacion = new Date();
